@@ -1,0 +1,891 @@
+package arvore_rubro_negra;
+
+public class ArvoreRubroNegra {
+
+    private No raiz;
+    private int tamanho;
+
+    public ArvoreRubroNegra() {
+        this.raiz = null;
+        this.tamanho = 0;
+    }
+
+    public No getRaiz() {
+        return raiz;
+    }
+
+    public int getTamanho() {
+        return tamanho;
+    }
+
+    /*
+     * ==============================
+     * INSERÇÃO
+     * ==============================
+     */
+
+    public boolean inserirNo(No novoNo) {
+
+        if (novoNo == null || novoNo.getElemento() == null) {
+            return false;
+        }
+
+        No pai = null;
+        No atual = raiz;
+
+        /*
+         * Primeiro fazemos uma inserção normal de
+         * Árvore Binária de Busca.
+         */
+        while (atual != null) {
+
+            pai = atual;
+
+            if (novoNo.getElemento() < atual.getElemento()) {
+                atual = atual.getFilhoEsquerda();
+
+            } else if (novoNo.getElemento() > atual.getElemento()) {
+                atual = atual.getFilhoDireita();
+
+            } else {
+                /*
+                 * Valor duplicado.
+                 */
+                return false;
+            }
+        }
+
+        novoNo.setPai(pai);
+        novoNo.setFilhoEsquerda(null);
+        novoNo.setFilhoDireita(null);
+        novoNo.setCor(Cor.RUBRO);
+
+        /*
+         * Caso seja o primeiro elemento da árvore.
+         */
+        if (pai == null) {
+            raiz = novoNo;
+
+        } else if (novoNo.getElemento() < pai.getElemento()) {
+            pai.setFilhoEsquerda(novoNo);
+
+        } else {
+            pai.setFilhoDireita(novoNo);
+        }
+
+        tamanho++;
+
+        corrigirInsercao(novoNo);
+
+        return true;
+    }
+
+    /*
+     * Método auxiliar para permitir inserir diretamente
+     * um valor inteiro.
+     */
+    public boolean inserir(int elemento) {
+        return inserirNo(new No(elemento));
+    }
+
+    /*
+     * Corrige possíveis violações das propriedades
+     * da Árvore Rubro-Negra após uma inserção.
+     */
+    private void corrigirInsercao(No no) {
+
+        /*
+         * Enquanto o nó não for a raiz
+         * e seu pai for vermelho.
+         */
+        while (no != raiz && corDoNo(no.getPai()) == Cor.RUBRO) {
+
+            No pai = no.getPai();
+            No avo = pai.getPai();
+
+            /*
+             * Pai está no lado esquerdo do avô.
+             */
+            if (pai == avo.getFilhoEsquerda()) {
+
+                No tio = avo.getFilhoDireita();
+
+                /*
+                 * CASO 1:
+                 * Pai vermelho e tio vermelho.
+                 *
+                 * Apenas recolorimos e continuamos
+                 * verificando a partir do avô.
+                 */
+                if (corDoNo(tio) == Cor.RUBRO) {
+
+                    pai.setCor(Cor.NEGRO);
+                    tio.setCor(Cor.NEGRO);
+                    avo.setCor(Cor.RUBRO);
+
+                    no = avo;
+
+                } else {
+
+                    /*
+                     * CASO 2:
+                     *
+                     * Nó está à direita do pai.
+                     *
+                     * Fazemos uma rotação à esquerda
+                     * no pai para transformar no caso 3.
+                     */
+                    if (no == pai.getFilhoDireita()) {
+
+                        no = pai;
+                        rotacaoEsquerda(no);
+
+                        pai = no.getPai();
+                        avo = pai.getPai();
+                    }
+
+                    /*
+                     * CASO 3:
+                     *
+                     * Nó está à esquerda do pai.
+                     */
+                    pai.setCor(Cor.NEGRO);
+                    avo.setCor(Cor.RUBRO);
+
+                    rotacaoDireita(avo);
+                }
+
+            } else {
+
+                /*
+                 * Situação espelhada:
+                 * pai está no lado direito do avô.
+                 */
+
+                No tio = avo.getFilhoEsquerda();
+
+                /*
+                 * CASO 1 espelhado:
+                 * tio vermelho.
+                 */
+                if (corDoNo(tio) == Cor.RUBRO) {
+
+                    pai.setCor(Cor.NEGRO);
+                    tio.setCor(Cor.NEGRO);
+                    avo.setCor(Cor.RUBRO);
+
+                    no = avo;
+
+                } else {
+
+                    /*
+                     * CASO 2 espelhado.
+                     */
+                    if (no == pai.getFilhoEsquerda()) {
+
+                        no = pai;
+                        rotacaoDireita(no);
+
+                        pai = no.getPai();
+                        avo = pai.getPai();
+                    }
+
+                    /*
+                     * CASO 3 espelhado.
+                     */
+                    pai.setCor(Cor.NEGRO);
+                    avo.setCor(Cor.RUBRO);
+
+                    rotacaoEsquerda(avo);
+                }
+            }
+        }
+
+        /*
+         * A raiz deve sempre ser preta.
+         */
+        raiz.setCor(Cor.NEGRO);
+    }
+
+    /*
+     * ==============================
+     * BUSCA
+     * ==============================
+     */
+
+    public boolean buscar(int elemento) {
+        return buscarNo(elemento) != null;
+    }
+
+    private No buscarNo(int elemento) {
+
+        No atual = raiz;
+
+        while (atual != null) {
+
+            if (elemento == atual.getElemento()) {
+                return atual;
+            }
+
+            if (elemento < atual.getElemento()) {
+                atual = atual.getFilhoEsquerda();
+            } else {
+                atual = atual.getFilhoDireita();
+            }
+        }
+
+        return null;
+    }
+
+    /*
+     * ==============================
+     * REMOÇÃO
+     * ==============================
+     */
+
+    public boolean remover(int elemento) {
+
+        No noRemover = buscarNo(elemento);
+
+        /*
+         * Elemento não existe.
+         */
+        if (noRemover == null) {
+            return false;
+        }
+
+        No substituto = noRemover;
+
+        Cor corOriginal = substituto.getCor();
+
+        No x;
+        No paiDeX;
+
+        /*
+         * CASO 1:
+         * Não possui filho esquerdo.
+         */
+        if (noRemover.getFilhoEsquerda() == null) {
+
+            x = noRemover.getFilhoDireita();
+            paiDeX = noRemover.getPai();
+
+            transplantar(
+                noRemover,
+                noRemover.getFilhoDireita()
+            );
+
+            if (x != null) {
+                paiDeX = x.getPai();
+            }
+
+        }
+
+        /*
+         * CASO 2:
+         * Não possui filho direito.
+         */
+        else if (noRemover.getFilhoDireita() == null) {
+
+            x = noRemover.getFilhoEsquerda();
+            paiDeX = noRemover.getPai();
+
+            transplantar(
+                noRemover,
+                noRemover.getFilhoEsquerda()
+            );
+
+            if (x != null) {
+                paiDeX = x.getPai();
+            }
+
+        }
+
+        /*
+         * CASO 3:
+         * Possui dois filhos.
+         */
+        else {
+
+            /*
+             * Procuramos o sucessor:
+             * menor elemento da subárvore direita.
+             */
+            substituto = minimo(noRemover.getFilhoDireita());
+
+            corOriginal = substituto.getCor();
+
+            x = substituto.getFilhoDireita();
+
+            /*
+             * O sucessor é filho direto
+             * do nó que será removido.
+             */
+            if (substituto.getPai() == noRemover) {
+
+                paiDeX = substituto;
+
+                if (x != null) {
+                    x.setPai(substituto);
+                }
+
+            } else {
+
+                paiDeX = substituto.getPai();
+
+                transplantar(
+                    substituto,
+                    substituto.getFilhoDireita()
+                );
+
+                substituto.setFilhoDireita(
+                    noRemover.getFilhoDireita()
+                );
+
+                substituto
+                    .getFilhoDireita()
+                    .setPai(substituto);
+            }
+
+            transplantar(noRemover, substituto);
+
+            substituto.setFilhoEsquerda(
+                noRemover.getFilhoEsquerda()
+            );
+
+            substituto
+                .getFilhoEsquerda()
+                .setPai(substituto);
+
+            substituto.setCor(noRemover.getCor());
+
+            if (x != null) {
+                paiDeX = x.getPai();
+            }
+        }
+
+        tamanho--;
+
+        /*
+         * Se removemos efetivamente um nó preto,
+         * as propriedades Rubro-Negras podem
+         * ter sido quebradas.
+         */
+        if (corOriginal == Cor.NEGRO) {
+            corrigirRemocao(x, paiDeX);
+        }
+
+        /*
+         * Garante que a raiz permaneça preta.
+         */
+        if (raiz != null) {
+            raiz.setCor(Cor.NEGRO);
+        }
+
+        return true;
+    }
+
+    /*
+     * Corrige a árvore após a remoção de um
+     * nó preto.
+     *
+     * O parâmetro pai é necessário porque
+     * neste código utilizamos null para representar
+     * as folhas pretas.
+     */
+    private void corrigirRemocao(No x, No pai) {
+
+        while (x != raiz && corDoNo(x) == Cor.NEGRO) {
+
+            if (pai == null) {
+                break;
+            }
+
+            /*
+             * X está no lado esquerdo.
+             */
+            if (x == pai.getFilhoEsquerda()) {
+
+                No irmao = pai.getFilhoDireita();
+
+                /*
+                 * CASO 1:
+                 * Irmão vermelho.
+                 */
+                if (corDoNo(irmao) == Cor.RUBRO) {
+
+                    irmao.setCor(Cor.NEGRO);
+                    pai.setCor(Cor.RUBRO);
+
+                    rotacaoEsquerda(pai);
+
+                    irmao = pai.getFilhoDireita();
+                }
+
+                /*
+                 * CASO 2:
+                 * Irmão preto e os dois filhos
+                 * também são pretos.
+                 */
+                if (
+                    corDoNo(filhoEsquerdo(irmao)) == Cor.NEGRO
+                    &&
+                    corDoNo(filhoDireito(irmao)) == Cor.NEGRO
+                ) {
+
+                    if (irmao != null) {
+                        irmao.setCor(Cor.RUBRO);
+                    }
+
+                    x = pai;
+                    pai = x.getPai();
+
+                } else {
+
+                    /*
+                     * CASO 3:
+                     *
+                     * Irmão preto.
+                     * Filho direito do irmão é preto.
+                     * Filho esquerdo é vermelho.
+                     */
+                    if (
+                        corDoNo(filhoDireito(irmao))
+                        == Cor.NEGRO
+                    ) {
+
+                        No filhoEsquerdo =
+                            filhoEsquerdo(irmao);
+
+                        if (filhoEsquerdo != null) {
+                            filhoEsquerdo.setCor(Cor.NEGRO);
+                        }
+
+                        if (irmao != null) {
+
+                            irmao.setCor(Cor.RUBRO);
+
+                            rotacaoDireita(irmao);
+                        }
+
+                        irmao = pai.getFilhoDireita();
+                    }
+
+                    /*
+                     * CASO 4.
+                     */
+                    if (irmao != null) {
+                        irmao.setCor(pai.getCor());
+                    }
+
+                    pai.setCor(Cor.NEGRO);
+
+                    No filhoDireito =
+                        filhoDireito(irmao);
+
+                    if (filhoDireito != null) {
+                        filhoDireito.setCor(Cor.NEGRO);
+                    }
+
+                    rotacaoEsquerda(pai);
+
+                    x = raiz;
+                    pai = null;
+                }
+
+            } else {
+
+                /*
+                 * Casos espelhados:
+                 * X está no lado direito.
+                 */
+
+                No irmao = pai.getFilhoEsquerda();
+
+                /*
+                 * CASO 1 espelhado.
+                 */
+                if (corDoNo(irmao) == Cor.RUBRO) {
+
+                    irmao.setCor(Cor.NEGRO);
+                    pai.setCor(Cor.RUBRO);
+
+                    rotacaoDireita(pai);
+
+                    irmao = pai.getFilhoEsquerda();
+                }
+
+                /*
+                 * CASO 2 espelhado.
+                 */
+                if (
+                    corDoNo(filhoDireito(irmao)) == Cor.NEGRO
+                    &&
+                    corDoNo(filhoEsquerdo(irmao)) == Cor.NEGRO
+                ) {
+
+                    if (irmao != null) {
+                        irmao.setCor(Cor.RUBRO);
+                    }
+
+                    x = pai;
+                    pai = x.getPai();
+
+                } else {
+
+                    /*
+                     * CASO 3 espelhado.
+                     */
+                    if (
+                        corDoNo(filhoEsquerdo(irmao))
+                        == Cor.NEGRO
+                    ) {
+
+                        No filhoDireito =
+                            filhoDireito(irmao);
+
+                        if (filhoDireito != null) {
+                            filhoDireito.setCor(Cor.NEGRO);
+                        }
+
+                        if (irmao != null) {
+
+                            irmao.setCor(Cor.RUBRO);
+
+                            rotacaoEsquerda(irmao);
+                        }
+
+                        irmao = pai.getFilhoEsquerda();
+                    }
+
+                    /*
+                     * CASO 4 espelhado.
+                     */
+                    if (irmao != null) {
+                        irmao.setCor(pai.getCor());
+                    }
+
+                    pai.setCor(Cor.NEGRO);
+
+                    No filhoEsquerdo =
+                        filhoEsquerdo(irmao);
+
+                    if (filhoEsquerdo != null) {
+                        filhoEsquerdo.setCor(Cor.NEGRO);
+                    }
+
+                    rotacaoDireita(pai);
+
+                    x = raiz;
+                    pai = null;
+                }
+            }
+        }
+
+        if (x != null) {
+            x.setCor(Cor.NEGRO);
+        }
+    }
+
+    /*
+     * ==============================
+     * ROTAÇÕES
+     * ==============================
+     */
+
+    private void rotacaoEsquerda(No x) {
+
+        if (x == null) {
+            return;
+        }
+
+        No y = x.getFilhoDireita();
+
+        if (y == null) {
+            return;
+        }
+
+        /*
+         * Passa o filho esquerdo de Y
+         * para ser filho direito de X.
+         */
+        x.setFilhoDireita(y.getFilhoEsquerda());
+
+        if (y.getFilhoEsquerda() != null) {
+
+            y.getFilhoEsquerda().setPai(x);
+        }
+
+        /*
+         * Y assume o antigo pai de X.
+         */
+        y.setPai(x.getPai());
+
+        /*
+         * Se X era a raiz,
+         * Y passa a ser a nova raiz.
+         */
+        if (x.getPai() == null) {
+
+            raiz = y;
+
+        } else if (
+            x == x.getPai().getFilhoEsquerda()
+        ) {
+
+            x.getPai().setFilhoEsquerda(y);
+
+        } else {
+
+            x.getPai().setFilhoDireita(y);
+        }
+
+        /*
+         * X passa a ser filho esquerdo de Y.
+         */
+        y.setFilhoEsquerda(x);
+
+        x.setPai(y);
+    }
+
+    private void rotacaoDireita(No x) {
+
+        if (x == null) {
+            return;
+        }
+
+        No y = x.getFilhoEsquerda();
+
+        if (y == null) {
+            return;
+        }
+
+        /*
+         * Passa o filho direito de Y
+         * para ser filho esquerdo de X.
+         */
+        x.setFilhoEsquerda(y.getFilhoDireita());
+
+        if (y.getFilhoDireita() != null) {
+
+            y.getFilhoDireita().setPai(x);
+        }
+
+        /*
+         * Y assume o antigo pai de X.
+         */
+        y.setPai(x.getPai());
+
+        /*
+         * Se X era a raiz,
+         * Y passa a ser a nova raiz.
+         */
+        if (x.getPai() == null) {
+
+            raiz = y;
+
+        } else if (
+            x == x.getPai().getFilhoDireita()
+        ) {
+
+            x.getPai().setFilhoDireita(y);
+
+        } else {
+
+            x.getPai().setFilhoEsquerda(y);
+        }
+
+        /*
+         * X passa a ser filho direito de Y.
+         */
+        y.setFilhoDireita(x);
+
+        x.setPai(y);
+    }
+
+    /*
+     * ==============================
+     * MÉTODOS AUXILIARES
+     * ==============================
+     */
+
+    /*
+     * Retorna preto para nós nulos.
+     *
+     * Na teoria da árvore Rubro-Negra,
+     * folhas NIL são consideradas pretas.
+     */
+    private Cor corDoNo(No no) {
+
+        if (no == null) {
+            return Cor.NEGRO;
+        }
+
+        return no.getCor();
+    }
+
+    private No filhoEsquerdo(No no) {
+
+        if (no == null) {
+            return null;
+        }
+
+        return no.getFilhoEsquerda();
+    }
+
+    private No filhoDireito(No no) {
+
+        if (no == null) {
+            return null;
+        }
+
+        return no.getFilhoDireita();
+    }
+
+    /*
+     * Substitui uma subárvore por outra.
+     */
+    private void transplantar(No antigo, No novo) {
+
+        if (antigo.getPai() == null) {
+
+            raiz = novo;
+
+        } else if (
+            antigo == antigo.getPai().getFilhoEsquerda()
+        ) {
+
+            antigo.getPai().setFilhoEsquerda(novo);
+
+        } else {
+
+            antigo.getPai().setFilhoDireita(novo);
+        }
+
+        if (novo != null) {
+            novo.setPai(antigo.getPai());
+        }
+    }
+
+    /*
+     * Retorna o menor elemento da subárvore.
+     */
+    private No minimo(No no) {
+
+        while (no.getFilhoEsquerda() != null) {
+            no = no.getFilhoEsquerda();
+        }
+
+        return no;
+    }
+
+    /*
+     * ==============================
+     * MOSTRAR ÁRVORE
+     * ==============================
+     */
+
+    public void mostrar() {
+
+        if (raiz == null) {
+
+            System.out.println(
+                "\nA árvore está vazia."
+            );
+
+            return;
+        }
+
+        System.out.println(
+            "\nÁrvore Rubro-Negra:"
+        );
+
+        mostrarHierarquico(
+            raiz,
+            "",
+            true
+        );
+    }
+
+    private void mostrarHierarquico(
+        No no,
+        String prefixo,
+        boolean ultimo
+    ) {
+
+        if (no == null) {
+            return;
+        }
+
+        System.out.print(prefixo);
+
+        if (ultimo) {
+            System.out.print("└── ");
+        } else {
+            System.out.print("├── ");
+        }
+
+        System.out.println(
+            no.getElemento()
+            + " ("
+            + nomeCor(no.getCor())
+            + ")"
+        );
+
+        No esquerdo = no.getFilhoEsquerda();
+        No direito = no.getFilhoDireita();
+
+        /*
+         * Se existem os dois filhos.
+         */
+        if (esquerdo != null && direito != null) {
+
+            mostrarHierarquico(
+                esquerdo,
+                prefixo + (ultimo ? "    " : "│   "),
+                false
+            );
+
+            mostrarHierarquico(
+                direito,
+                prefixo + (ultimo ? "    " : "│   "),
+                true
+            );
+
+        }
+
+        /*
+         * Apenas filho esquerdo.
+         */
+        else if (esquerdo != null) {
+
+            mostrarHierarquico(
+                esquerdo,
+                prefixo + (ultimo ? "    " : "│   "),
+                true
+            );
+
+        }
+
+        /*
+         * Apenas filho direito.
+         */
+        else if (direito != null) {
+
+            mostrarHierarquico(
+                direito,
+                prefixo + (ultimo ? "    " : "│   "),
+                true
+            );
+        }
+    }
+
+    private String nomeCor(Cor cor) {
+
+        if (cor == Cor.RUBRO) {
+            return "RUBRO";
+        }
+
+        return "NEGRO";
+    }
+}
